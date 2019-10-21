@@ -96,6 +96,102 @@ void test_canRemoveAddedHandle() {
     TEST_ASSERT_EQUAL(false, has);
 }
 
+void test_addAndRemoveHandlesReverseOrder() {
+    const int capacity = container_capacity(test_container);
+    handle_t handles[capacity];
+
+    for (int i = 0; i < capacity; i++) {
+        handles[i] = container_add(test_container);
+    }
+
+    TEST_ASSERT_EQUAL_INT(5, container_size(test_container));
+
+    bool removed = true;
+    for (int i = capacity - 1; i >= 0; i--) {
+        removed &= !!container_remove(test_container, handles[i]);
+    }
+
+    TEST_ASSERT_EQUAL(true, removed);
+    TEST_ASSERT_EQUAL_INT(0, container_size(test_container));
+
+    for (int i = 0; i < capacity; i++) {
+        TEST_ASSERT_EQUAL(false, container_has(test_container, handles[i]));
+    }
+}
+
+void test_addAndRemoveHandlesOrdered() {
+    const int capacity = container_capacity(test_container);
+    handle_t handles[capacity];
+
+    for (int i = 0; i < capacity; i++) {
+        handles[i] = container_add(test_container);
+    }
+
+    TEST_ASSERT_EQUAL_INT(5, container_size(test_container));
+
+    bool removed = true;
+    for (int i = 0; i < capacity; ++i) {
+        removed &= !!container_remove(test_container, handles[i]);
+    }
+
+    TEST_ASSERT_EQUAL(true, removed);
+    TEST_ASSERT_EQUAL_INT(0, container_size(test_container));
+
+    for (int i = 0; i < capacity; i++) {
+        TEST_ASSERT_EQUAL(false, container_has(test_container, handles[i]));
+    }
+}
+
+void test_canGetObjectViaHandle() {
+    handle_t handle = container_add(test_container);
+    object_t* object = container_get(test_container, handle);
+    TEST_ASSERT_NOT_NULL(object);
+}
+
+void test_addTwoHandlesAndUpdateObjects() {
+    handle_t handle_1 = container_add(test_container);
+    handle_t handle_2 = container_add(test_container);
+
+    {
+        object_t* object_1 = container_get(test_container, handle_1);
+        object_t* object_2 = container_get(test_container, handle_2);
+
+        object_1->value_ = 4;
+        object_2->value_ = 5;
+    }
+
+    {
+        object_t* object_1 = container_get(test_container, handle_1);
+        object_t* object_2 = container_get(test_container, handle_2);
+
+        TEST_ASSERT_EQUAL_INT(4, object_1->value_);
+        TEST_ASSERT_EQUAL_INT(5, object_2->value_);
+    }
+}
+
+void test_originalHandleCannotAccessObjectAfterRemoval() {
+    handle_t handle = container_add(test_container);
+    container_remove(test_container, handle);
+    object_t* object = container_get(test_container, handle);
+    TEST_ASSERT_NULL(object);
+}
+
+void test_objectsRemainPackedAfterRemoval() {
+    const int capacity = 5;
+    handle_t handles[capacity];
+
+    for (int i = 0; i < capacity; i++) {
+        handles[i] = container_add(test_container);
+    }
+
+    container_remove(test_container, handles[2]);
+
+    object_t* begin = container_get(test_container, handles[0]);
+    object_t* was_end = container_get(test_container, handles[4]);
+
+    TEST_ASSERT_EQUAL_INT(2, was_end - begin);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_canAllocContainer);
@@ -104,11 +200,18 @@ int main(void) {
     RUN_TEST(test_containerSizeIsOneAfterSingleAdd);
     RUN_TEST(test_containerSizeGrowsWithConsecutiveAdds);
     RUN_TEST(test_cannotAddMoreHandlesThanCapacity);
-    // RUN_TEST(test_handleReusedAfterRemoval);
+    RUN_TEST(test_handleReusedAfterRemoval);
     RUN_TEST(test_containerHasAddedHandle);
     RUN_TEST(test_containerDoesNotHaveHandle);
     RUN_TEST(test_cannotRemoveInvalidHandle);
     RUN_TEST(test_canRemoveAddedHandle);
+    RUN_TEST(test_addAndRemoveHandlesReverseOrder);
+    RUN_TEST(test_addAndRemoveHandlesOrdered);
+    RUN_TEST(test_canGetObjectViaHandle);
+    RUN_TEST(test_addTwoHandlesAndUpdateObjects);
+    RUN_TEST(test_originalHandleCannotAccessObjectAfterRemoval);
+    RUN_TEST(test_objectsRemainPackedAfterRemoval);
+
     return UNITY_END();
 
     // container_t* container = container_alloc();

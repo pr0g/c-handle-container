@@ -4,18 +4,17 @@
 
 typedef struct internal_handle_t {
     handle_t handle_; // handle itself
-    // int lookup_; // where to look in object arr
-    // int next_; // next internal handle
+    int lookup_; // where to look in object arr
+    int next_; // next internal handle
 } internal_handle_t;
 
 typedef struct container_t {
     enum { CAPACITY = 5 };
-    // int object_ids_[CAPACITY];
-    // object_t objects_[CAPACITY];
+    int object_ids_[CAPACITY];
+    object_t objects_[CAPACITY];
     internal_handle_t handles_[CAPACITY];
 
-    // internal_handle_t next_;
-    // internal_handle_t back_;
+    int next_;
     int size_;
 } container_t;
 
@@ -33,13 +32,12 @@ container_t* container_init(container_t* container) {
     for (int i = 0; i < CAPACITY; ++i) {
         container->handles_[i].handle_.id_ = i;
         container->handles_[i].handle_.gen_ = -1;
-    //     container->handles_[i].lookup_ = i;
-    //     container->handles_[i].next_ = i + 1;
-    //     container->object_ids_[i] = i;
+        container->handles_[i].lookup_ = -1;
+        container->handles_[i].next_ = i + 1;
+        container->object_ids_[i] = i;
     }
 
-    // container->next_ = container->handles_[0];
-    // container->back_ = container->handles_[0];
+    container->next_ = 0;
     container->size_ = 0;
     return container;
 }
@@ -53,36 +51,29 @@ int container_capacity(container_t* container) {
 }
 
 handle_t container_add(container_t* container) {
-    // handle size - return invalid handle
-    const int next = container->size_++;
-    if (next >= CAPACITY) {
+    const int insert = container->size_++;
+    if (insert >= CAPACITY) {
         return (handle_t) { .id_ = -1, .gen_ = -1 };
     }
 
+    const int next = container->next_;
+    container->handles_[next].lookup_ = insert;
     handle_t* handle = &container->handles_[next].handle_;
     handle->gen_++;
-    return *handle;
 
-    // const internal_handle_t next = container->next_;
-    // container->next_ = container->handles_[next.next_];
-    // container->size_++;
-    // return next.handle_;
+    container->object_ids_[next] = handle->id_;
+
+    container->next_ = container->handles_[next].next_;
+
+    return *handle;
 }
 
 object_t* container_get(container_t* container, handle_t handle) {
-    return NULL;
+    if (!container_has(container, handle)) {
+        return NULL;
+    }
 
-    // const int last = container->size_;
-    // const int lookup = container->handles_[handle.id_].lookup_;
-    // if (lookup >= last) {
-    //     return NULL;
-    // }
-
-    // if (container->handles_[handle.id_].handle_.gen_ != handle.gen_) {
-    //     return NULL;
-    // }
-
-    // return &container->objects_[lookup];
+    return &container->objects_[container->handles_[handle.id_].lookup_];
 }
 
 bool container_has(container_t* container, handle_t handle) {
@@ -90,8 +81,8 @@ bool container_has(container_t* container, handle_t handle) {
         return false;
     }
 
-    handle_t h = container->handles_[handle.id_].handle_;
-    return handle.gen_ == h.gen_;
+    internal_handle_t ih = container->handles_[handle.id_];
+    return handle.gen_ == ih.handle_.gen_ && ih.lookup_ != -1;
 }
 
 bool container_remove(container_t* container, handle_t handle) {
@@ -99,23 +90,18 @@ bool container_remove(container_t* container, handle_t handle) {
         return false;
     }
 
-    container->handles_[handle.id_].handle_.gen_++;
+    container->handles_[container->object_ids_[container->size_ - 1]].lookup_
+        = container->handles_[handle.id_].lookup_;
+    container->objects_[container->handles_[handle.id_].lookup_]
+        = container->objects_[container->size_ - 1];
+    container->object_ids_[container->handles_[handle.id_].lookup_]
+        = container->object_ids_[container->size_ - 1];
+
+    container->handles_[handle.id_].lookup_ = -1;
+    container->handles_[handle.id_].next_ = container->next_;
+    container->next_ = handle.id_;
+
+    container->size_--;
 
     return true;
-    // todo - check size
-    // todo - check generation of handle
-
-    // container->handles_[handle.id_].next_ = container->next_.next_;
-    // container->handles_[handle.id_].handle_.gen_++;
-    // container->next_ = container->handles_[handle.id_];
-
-    // container->objects_[container->handles_[handle.id_].lookup_]
-    //     = container->objects_[container->size_ - 1];
-    // container->object_ids_[container->handles_[handle.id_].lookup_]
-    //     = container->object_ids_[container->size_ - 1];
-
-    // container->handles_[container->object_ids_[container->handles_[handle.id_].lookup_]].lookup_ =
-    //     container->handles_[handle.id_].lookup_;
-
-    // container->size_--;
 }
