@@ -3,5 +3,5 @@ container todo
 - --add element
 - --contain element
 - --add multiple elements, size expected
-- remove element, size expected
-- remove element, no longer accessible
+- --remove element, size expected
+- --remove element, no longer accessible

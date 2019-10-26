@@ -72,6 +72,21 @@ void test_cannotAddMoreHandlesThanCapacity() {
     TEST_ASSERT_EQUAL_INT(-1, next_handle.id_);
 }
 
+void test_removeDecreasesSize() {
+    const int handle_count = 5;
+    handle_t handles[handle_count];
+    for (int i = 0; i < handle_count; ++i) {
+        handles[i] = container_add(test_container);
+    }
+
+    TEST_ASSERT_EQUAL_INT(handle_count, container_size(test_container));
+
+    container_remove(test_container, handles[2]);
+    container_remove(test_container, handles[0]);
+
+    TEST_ASSERT_EQUAL_INT(3, container_size(test_container));
+}
+
 void test_handleReusedAfterRemoval() {
     handle_t initial_handle = container_add(test_container);
     container_remove(test_container, initial_handle);
@@ -190,6 +205,46 @@ void test_objectsRemainPackedAfterRemoval() {
     TEST_ASSERT_EQUAL_INT(2, was_end - begin);
 }
 
+void test_containerDebugVisualization() {
+    const int handle_count = 5;
+    handle_t handles[handle_count];
+    for (int i = 0; i < handle_count; ++i) {
+        handles[i] = container_add(test_container);
+    }
+
+    container_remove(test_container, handles[2]);
+    container_remove(test_container, handles[0]);
+
+    const int buffer_size = debug_container_handles(test_container, 0, NULL);
+
+    char buffer[buffer_size];
+    buffer[0] = '\0';
+
+    debug_container_handles(test_container, buffer_size, buffer);
+
+    TEST_ASSERT_EQUAL_STRING("[x][o][x][o][o]", buffer);
+}
+
+void test_containerDebugVisualizationBufferTooSmall() {
+    const int handle_count = 5;
+    handle_t handles[handle_count];
+    for (int i = 0; i < handle_count; ++i) {
+        handles[i] = container_add(test_container);
+    }
+
+    const int buffer_size = 2;
+    char buffer[buffer_size];
+    buffer[0] = '\0';
+
+    int result = debug_container_handles(test_container, buffer_size, buffer);
+    TEST_ASSERT_EQUAL_INT(-1, result);
+
+    int glyph_size = 3;
+    int expected_size = container_capacity(test_container) * glyph_size + 1 /*null terminator*/;
+    int required_buffer_size = debug_container_handles(test_container, 0, NULL);
+    TEST_ASSERT_EQUAL_INT(expected_size, required_buffer_size);
+}
+
 int main(void) {
     UNITY_BEGIN();
     RUN_TEST(test_canAllocContainer);
@@ -201,6 +256,7 @@ int main(void) {
     RUN_TEST(test_handleReusedAfterRemoval);
     RUN_TEST(test_containerHasAddedHandle);
     RUN_TEST(test_containerDoesNotHaveHandle);
+    RUN_TEST(test_removeDecreasesSize);
     RUN_TEST(test_cannotRemoveInvalidHandle);
     RUN_TEST(test_canRemoveAddedHandle);
     RUN_TEST(test_addAndRemoveHandlesReverseOrder);
@@ -209,5 +265,7 @@ int main(void) {
     RUN_TEST(test_addTwoHandlesAndUpdateObjects);
     RUN_TEST(test_originalHandleCannotAccessObjectAfterRemoval);
     RUN_TEST(test_objectsRemainPackedAfterRemoval);
+    RUN_TEST(test_containerDebugVisualization);
+    RUN_TEST(test_containerDebugVisualizationBufferTooSmall);
     return UNITY_END();
 }

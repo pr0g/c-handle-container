@@ -1,6 +1,7 @@
 #include "container.h"
 
 #include "stdlib.h"
+#include "string.h"
 
 typedef struct internal_handle_t {
     handle_t handle_; // handle itself
@@ -104,4 +105,36 @@ bool container_remove(container_t* container, handle_t handle) {
     container->size_--;
 
     return true;
+}
+
+static int max(int lhs, int rhs) {
+    return lhs > rhs ? lhs : rhs;
+}
+
+int debug_container_handles(container_t* container, int buffer_size, char buffer[buffer_size]) {
+    const char* filled_glyph = "[o]";
+    const char* empty_glyph = "[x]";
+
+    const int filled_glyph_len = strlen(filled_glyph);
+    const int empty_glyph_len = strlen(empty_glyph);
+    const int required_buffer_size = CAPACITY * max(filled_glyph_len, empty_glyph_len) + 1;
+
+    if (buffer == NULL) {
+        return required_buffer_size;
+    } else if (buffer_size < required_buffer_size) {
+        return -1;
+    } else {
+        for (int i = 0; i < CAPACITY; i++) {
+            const char* glyph = NULL;
+            if (container->handles_[i].lookup_ == -1) {
+                glyph = empty_glyph;
+            } else {
+                glyph = filled_glyph;
+            }
+
+            strcat(buffer, glyph);
+        }
+
+        return 0;
+    }
 }

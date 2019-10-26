@@ -25,4 +25,7 @@ object_t* container_get(container_t* container, handle_t handle);
 bool container_has(container_t* container, handle_t handle);
 bool container_remove(container_t* container, handle_t handle);
 
+// pass a null pointer initially to have the function return the size of the buffer required
+int debug_container_handles(container_t* container, int buffer_size, char buffer[buffer_size]);
+
 #endif // CONTAINER_H
