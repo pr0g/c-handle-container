@@ -5,6 +5,7 @@
 
 #include "container.h"
 
+#include "string.h"
 // TEST_FAIL_MESSAGE("oh no");
 
 container_t* test_container = NULL;
@@ -72,7 +73,7 @@ void test_cannotAddMoreHandlesThanCapacity() {
         container_add(test_container);
     }
 
-    TEST_ASSERT_EQUAL_INT(5, container_size(test_container));
+    TEST_ASSERT_EQUAL_INT(capacity, container_size(test_container));
     handle_t next_handle = container_add(test_container);
     TEST_ASSERT_EQUAL_INT(-1, next_handle.gen_);
     TEST_ASSERT_EQUAL_INT(-1, next_handle.id_);
@@ -123,7 +124,7 @@ void test_addAndRemoveHandlesReverseOrder() {
         handles[i] = container_add(test_container);
     }
 
-    TEST_ASSERT_EQUAL_INT(5, container_size(test_container));
+    TEST_ASSERT_EQUAL_INT(capacity, container_size(test_container));
 
     bool removed = true;
     for (int i = capacity - 1; i >= 0; i--) {
@@ -146,7 +147,7 @@ void test_addAndRemoveHandlesOrdered() {
         handles[i] = container_add(test_container);
     }
 
-    TEST_ASSERT_EQUAL_INT(5, container_size(test_container));
+    TEST_ASSERT_EQUAL_INT(capacity, container_size(test_container));
 
     bool removed = true;
     for (int i = 0; i < capacity; ++i) {
@@ -221,7 +222,16 @@ void test_containerDebugVisualization() {
 
     debug_container_handles(test_container, buffer_size, buffer);
 
-    TEST_ASSERT_EQUAL_STRING("[x][o][x][o][o]", buffer);
+    char expected_buffer[buffer_size];
+    expected_buffer[0] = '\0';
+
+    for (int i = 0; i < container_capacity(test_container); i++) {
+        strcat(expected_buffer, "[x]");
+    }
+
+    memcpy(expected_buffer, "[x][o][x][o][o]", 15);
+
+    TEST_ASSERT_EQUAL_STRING(expected_buffer, buffer);
 }
 
 void test_containerDebugVisualizationBufferTooSmall() {
@@ -245,25 +255,35 @@ void test_ensureHandlesReaddedInOrder() {
     handle_t handles[5];
     initContainerWithFiveHandles(handles);
 
+    const int buffer_size = debug_container_handles(test_container, 0, NULL);
+
+    char expected_buffer[buffer_size];
+    expected_buffer[0] = '\0';
+
+    for (int i = 0; i < container_capacity(test_container); i++) {
+        strcat(expected_buffer, "[x]");
+    }
+
     for (int i = 0; i < 5; ++i) {
         container_remove(test_container, handles[i]);
     }
-    const int buffer_size = debug_container_handles(test_container, 0, NULL);
 
     char buffer[buffer_size];
     buffer[0] = '\0';
     debug_container_handles(test_container, buffer_size, buffer);
-    TEST_ASSERT_EQUAL_STRING("[x][x][x][x][x]", buffer);
+    TEST_ASSERT_EQUAL_STRING(expected_buffer, buffer);
 
     handle_t first_new_handle = container_add(test_container);
     buffer[0] = '\0';
     debug_container_handles(test_container, buffer_size, buffer);
-    TEST_ASSERT_EQUAL_STRING("[x][x][x][x][o]", buffer);
+    memcpy(expected_buffer, "[x][x][x][x][o]", 15);
+    TEST_ASSERT_EQUAL_STRING(expected_buffer, buffer);
 
     handle_t second_new_handle = container_add(test_container);
     buffer[0] = '\0';
     debug_container_handles(test_container, buffer_size, buffer);
-    TEST_ASSERT_EQUAL_STRING("[x][x][x][o][o]", buffer);
+    memcpy(expected_buffer, "[x][x][x][o][o]", 15);
+    TEST_ASSERT_EQUAL_STRING(expected_buffer, buffer);
 
     object_t* begin = container_get(test_container, first_new_handle);
     object_t* end = container_get(test_container, second_new_handle);

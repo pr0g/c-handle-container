@@ -10,7 +10,7 @@ typedef struct internal_handle_t {
 } internal_handle_t;
 
 typedef struct container_t {
-    enum { CAPACITY = 5 };
+    enum { CAPACITY = 10 }; // small capacity to make testing edge cases easier
     int object_ids_[CAPACITY];
     object_t objects_[CAPACITY];
     internal_handle_t handles_[CAPACITY];
