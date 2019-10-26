@@ -9,6 +9,12 @@
 
 container_t* test_container = NULL;
 
+static void initContainerWithFiveHandles(handle_t handles[static 5]) {
+    for (int i = 0; i < 5; ++i) {
+        handles[i] = container_add(test_container);
+    }
+}
+
 void setUp(void) {
     test_container = container_alloc();
     container_init(test_container);
@@ -190,12 +196,8 @@ void test_originalHandleCannotAccessObjectAfterRemoval() {
 }
 
 void test_objectsRemainPackedAfterRemoval() {
-    const int capacity = 5;
-    handle_t handles[capacity];
-
-    for (int i = 0; i < capacity; i++) {
-        handles[i] = container_add(test_container);
-    }
+    handle_t handles[5];
+    initContainerWithFiveHandles(handles);
 
     container_remove(test_container, handles[2]);
 
@@ -206,11 +208,8 @@ void test_objectsRemainPackedAfterRemoval() {
 }
 
 void test_containerDebugVisualization() {
-    const int handle_count = 5;
-    handle_t handles[handle_count];
-    for (int i = 0; i < handle_count; ++i) {
-        handles[i] = container_add(test_container);
-    }
+    handle_t handles[5];
+    initContainerWithFiveHandles(handles);
 
     container_remove(test_container, handles[2]);
     container_remove(test_container, handles[0]);
@@ -226,11 +225,8 @@ void test_containerDebugVisualization() {
 }
 
 void test_containerDebugVisualizationBufferTooSmall() {
-    const int handle_count = 5;
-    handle_t handles[handle_count];
-    for (int i = 0; i < handle_count; ++i) {
-        handles[i] = container_add(test_container);
-    }
+    handle_t handles[5];
+    initContainerWithFiveHandles(handles);
 
     const int buffer_size = 2;
     char buffer[buffer_size];
@@ -243,6 +239,38 @@ void test_containerDebugVisualizationBufferTooSmall() {
     int expected_size = container_capacity(test_container) * glyph_size + 1 /*null terminator*/;
     int required_buffer_size = debug_container_handles(test_container, 0, NULL);
     TEST_ASSERT_EQUAL_INT(expected_size, required_buffer_size);
+}
+
+void test_ensureHandlesReaddedInOrder() {
+    handle_t handles[5];
+    initContainerWithFiveHandles(handles);
+
+    for (int i = 0; i < 5; ++i) {
+        container_remove(test_container, handles[i]);
+    }
+    const int buffer_size = debug_container_handles(test_container, 0, NULL);
+
+    char buffer[buffer_size];
+    buffer[0] = '\0';
+    debug_container_handles(test_container, buffer_size, buffer);
+    TEST_ASSERT_EQUAL_STRING("[x][x][x][x][x]", buffer);
+
+    handle_t first_new_handle = container_add(test_container);
+    buffer[0] = '\0';
+    debug_container_handles(test_container, buffer_size, buffer);
+    TEST_ASSERT_EQUAL_STRING("[x][x][x][x][o]", buffer);
+
+    handle_t second_new_handle = container_add(test_container);
+    buffer[0] = '\0';
+    debug_container_handles(test_container, buffer_size, buffer);
+    TEST_ASSERT_EQUAL_STRING("[x][x][x][o][o]", buffer);
+
+    object_t* begin = container_get(test_container, first_new_handle);
+    object_t* end = container_get(test_container, second_new_handle);
+
+    // ensure objects are tightly packed
+    ptrdiff_t size = end - begin;
+    TEST_ASSERT_EQUAL_INT64(1, size);
 }
 
 int main(void) {
@@ -267,5 +295,6 @@ int main(void) {
     RUN_TEST(test_objectsRemainPackedAfterRemoval);
     RUN_TEST(test_containerDebugVisualization);
     RUN_TEST(test_containerDebugVisualizationBufferTooSmall);
+    RUN_TEST(test_ensureHandlesReaddedInOrder);
     return UNITY_END();
 }
