@@ -5,5 +5,4 @@ add_executable(${PROJECT_NAME} main.c container.c)
 find_package(unity)
 
 target_link_libraries(
-    ${PROJECT_NAME} PRIVATE unity
-)
+    ${PROJECT_NAME} PRIVATE unity)

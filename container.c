@@ -54,6 +54,7 @@ int container_capacity(container_t* container) {
 handle_t container_add(container_t* container) {
     const int insert = container->size_++;
     if (insert >= CAPACITY) {
+        // invalid handle
         return (handle_t) { .id_ = -1, .gen_ = -1 };
     }
 
