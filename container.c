@@ -11,9 +11,10 @@ typedef struct internal_handle_t {
 
 typedef struct container_t {
     enum { CAPACITY = 10 }; // small capacity to make testing edge cases easier
-    int object_ids_[CAPACITY];
-    object_t objects_[CAPACITY];
-    internal_handle_t handles_[CAPACITY];
+    int object_ids_[CAPACITY]; // map from object back to handle (synchronized
+                               // with objects_)
+    object_t objects_[CAPACITY]; // packed objects
+    internal_handle_t handles_[CAPACITY]; // sparse handles
 
     int next_;
     int size_;
@@ -35,7 +36,7 @@ container_t* container_init(container_t* container) {
         container->handles_[i].handle_.gen_ = -1;
         container->handles_[i].lookup_ = -1;
         container->handles_[i].next_ = i + 1;
-        container->object_ids_[i] = i;
+        container->object_ids_[i] = -1;
     }
 
     container->next_ = 0;
@@ -58,14 +59,14 @@ handle_t container_add(container_t* container) {
         return (handle_t) { .id_ = -1, .gen_ = -1 };
     }
 
-    const int next = container->next_;
-    container->handles_[next].lookup_ = insert;
-    handle_t* handle = &container->handles_[next].handle_;
+    const int now = container->next_;
+    container->handles_[now].lookup_ = insert;
+    handle_t* handle = &container->handles_[now].handle_;
     handle->gen_++;
 
-    container->object_ids_[next] = handle->id_;
+    container->object_ids_[now] = handle->id_;
 
-    container->next_ = container->handles_[next].next_;
+    container->next_ = container->handles_[now].next_;
 
     return *handle;
 }
@@ -92,10 +93,16 @@ bool container_remove(container_t* container, handle_t handle) {
         return false;
     }
 
+    // find the handle of the last object currently stored and have it
+    // point to the look-up of the object about to be removed
     container->handles_[container->object_ids_[container->size_ - 1]].lookup_
         = container->handles_[handle.id_].lookup_;
+    // copy the last object stored into the the position of the object
+    // being removed
     container->objects_[container->handles_[handle.id_].lookup_]
         = container->objects_[container->size_ - 1];
+    // copy the last object id into the position of the object being removed
+    // (in the parallel object_ids vector)
     container->object_ids_[container->handles_[handle.id_].lookup_]
         = container->object_ids_[container->size_ - 1];
 
